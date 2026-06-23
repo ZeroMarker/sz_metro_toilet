@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>深圳地铁厕所地图</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ4hlgyJ6JqC2FpqEiS4mM48o7aWABs="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="厕所查询">
+        <header class="app-header">
+          <p class="eyebrow">Shenzhen Metro</p>
+          <h1>深圳地铁厕所地图</h1>
+          <p class="summary">查询站点厕所位置、是否在付费区、无障碍和母婴设施。</p>
+        </header>
+
+        <section class="search-panel" aria-label="筛选条件">
+          <label class="search-box">
+            <span>搜索</span>
+            <input id="searchInput" type="search" placeholder="站名 / 出口 / 位置" autocomplete="off" />
+          </label>
+
+          <div>
+            <span class="filter-label">线路</span>
+            <div id="lineFilters" class="line-filters" aria-label="线路筛选"></div>
+          </div>
+
+          <div class="toggle-grid">
+            <label><input id="paidAreaOnly" type="checkbox" /> 站内厕所</label>
+            <label><input id="accessibleOnly" type="checkbox" /> 无障碍</label>
+            <label><input id="babyCareOnly" type="checkbox" /> 母婴室</label>
+          </div>
+        </section>
+
+        <section class="result-meta" aria-live="polite">
+          <strong id="resultCount">0</strong>
+          <span>个站点匹配</span>
+        </section>
+
+        <section id="stationList" class="station-list" aria-label="站点列表"></section>
+      </aside>
+
+      <section class="map-panel" aria-label="地图">
+        <div id="map"></div>
+        <article id="detailCard" class="detail-card" aria-live="polite"></article>
+      </section>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="app.js"></script>
+  </body>
+</html>
+

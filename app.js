@@ -3,6 +3,9 @@ const state = {
   selectedLine: "全部",
   selectedStationId: null,
   markers: new Map(),
+  isLoading: true,
+  favorites: JSON.parse(localStorage.getItem("favorites") || "[]"),
+  userLocation: null,
 };
 
 const els = {
@@ -14,7 +17,29 @@ const els = {
   resultCount: document.querySelector("#resultCount"),
   stationList: document.querySelector("#stationList"),
   detailCard: document.querySelector("#detailCard"),
+  loadingState: document.querySelector("#loadingState"),
+  locateBtn: document.querySelector("#locateBtn"),
+  showFavOnly: document.querySelector("#showFavOnly"),
 };
+
+function debounce(fn, delay = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+function toggleFavorite(id) {
+  const idx = state.favorites.indexOf(id);
+  if (idx === -1) {
+    state.favorites.push(id);
+  } else {
+    state.favorites.splice(idx, 1);
+  }
+  localStorage.setItem("favorites", JSON.stringify(state.favorites));
+  render();
+}
 
 const map = L.map("map", {
   zoomControl: false,
@@ -35,9 +60,19 @@ const markerIcon = L.divIcon({
 });
 
 async function init() {
-  const response = await fetch("data/toilets.json");
-  state.stations = await response.json();
-  state.selectedStationId = state.stations[0]?.id ?? null;
+  try {
+    const response = await fetch("data/toilets.json");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    state.stations = await response.json();
+    state.selectedStationId = state.stations[0]?.id ?? null;
+  } catch (error) {
+    els.stationList.innerHTML = '<div class="empty-state">数据加载失败，请检查 data/toilets.json</div>';
+    console.error(error);
+    return;
+  } finally {
+    state.isLoading = false;
+    if (els.loadingState) els.loadingState.style.display = "none";
+  }
 
   renderLineFilters();
   bindEvents();
@@ -45,10 +80,18 @@ async function init() {
 }
 
 function bindEvents() {
-  els.searchInput.addEventListener("input", render);
+  const debouncedRender = debounce(render, 250);
+  els.searchInput.addEventListener("input", debouncedRender);
   els.paidAreaOnly.addEventListener("change", render);
   els.accessibleOnly.addEventListener("change", render);
   els.babyCareOnly.addEventListener("change", render);
+
+  if (els.locateBtn) {
+    els.locateBtn.addEventListener("click", locateUser);
+  }
+  if (els.showFavOnly) {
+    els.showFavOnly.addEventListener("change", render);
+  }
 }
 
 function renderLineFilters() {
@@ -75,6 +118,7 @@ function renderLineFilters() {
 
 function getFilteredStations() {
   const keyword = els.searchInput.value.trim().toLowerCase();
+  const showFavOnly = els.showFavOnly?.checked;
 
   return state.stations.filter((station) => {
     const keywordTarget = [
@@ -87,12 +131,16 @@ function getFilteredStations() {
       .join(" ")
       .toLowerCase();
 
+    const keywordChars = keyword.split("");
+    const fuzzyMatch = keywordChars.every((char) => keywordTarget.includes(char));
+
     return (
       (state.selectedLine === "全部" || station.lines.includes(state.selectedLine)) &&
-      (!keyword || keywordTarget.includes(keyword)) &&
+      (!keyword || fuzzyMatch) &&
       (!els.paidAreaOnly.checked || station.paidArea) &&
       (!els.accessibleOnly.checked || station.accessible) &&
-      (!els.babyCareOnly.checked || station.babyCare)
+      (!els.babyCareOnly.checked || station.babyCare) &&
+      (!showFavOnly || state.favorites.includes(station.id))
     );
   });
 }
@@ -122,7 +170,12 @@ function renderStationList(stations) {
         <button class="station-card${station.id === state.selectedStationId ? " is-selected" : ""}" type="button" data-id="${station.id}">
           <div class="station-title">
             <span class="station-name">${station.name}</span>
-            <span class="line-badge">${station.lines.join(" / ")}</span>
+            <div class="station-actions">
+              <span class="line-badge">${station.lines.join(" / ")}</span>
+              <button class="fav-btn${state.favorites.includes(station.id) ? " is-fav" : ""}" data-fav="${station.id}" title="收藏">
+                ${state.favorites.includes(station.id) ? "★" : "☆"}
+              </button>
+            </div>
           </div>
           <p class="station-location">${station.location}</p>
           <div class="tag-row">
@@ -136,7 +189,18 @@ function renderStationList(stations) {
     .join("");
 
   els.stationList.querySelectorAll(".station-card").forEach((card) => {
-    card.addEventListener("click", () => selectStation(card.dataset.id, true));
+    card.addEventListener("click", (e) => {
+      if (!e.target.closest(".fav-btn")) {
+        selectStation(card.dataset.id, true);
+      }
+    });
+  });
+
+  els.stationList.querySelectorAll(".fav-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFavorite(btn.dataset.fav);
+    });
   });
 }
 
@@ -192,7 +256,50 @@ function selectStation(id, panToMarker) {
   render();
 }
 
-init().catch((error) => {
-  els.stationList.innerHTML = '<div class="empty-state">数据加载失败，请检查 data/toilets.json</div>';
-  console.error(error);
-});
+function locateUser() {
+  if (!navigator.geolocation) {
+    alert("浏览器不支持定位功能");
+    return;
+  }
+
+  if (els.locateBtn) els.locateBtn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (els.locateBtn) {
+        els.locateBtn.disabled = false;
+        els.locateBtn.textContent = "已定位";
+      }
+      sortStationsByDistance();
+      render();
+    },
+    (err) => {
+      if (els.locateBtn) els.locateBtn.disabled = false;
+      alert("定位失败：" + err.message);
+    },
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
+}
+
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function sortStationsByDistance() {
+  if (!state.userLocation) return;
+
+  state.stations.sort((a, b) => {
+    const distA = getDistance(state.userLocation.lat, state.userLocation.lng, a.lat, a.lng);
+    const distB = getDistance(state.userLocation.lat, state.userLocation.lng, b.lat, b.lng);
+    return distA - distB;
+  });
+}
+
+init();

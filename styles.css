@@ -276,6 +276,104 @@ h1 {
   text-align: center;
 }
 
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: var(--muted);
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.locate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 10px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.locate-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+}
+
+.locate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.station-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--muted);
+  padding: 2px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.fav-btn:hover,
+.fav-btn.is-fav {
+  color: #f5a623;
+}
+
+.mobile-detail-toggle {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .mobile-detail-toggle {
+    display: block;
+  }
+
+  .detail-card {
+    bottom: 50px;
+  }
+}
+
 .toilet-marker {
   display: grid;
   place-items: center;

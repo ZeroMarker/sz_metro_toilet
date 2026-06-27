@@ -36,13 +36,27 @@
             <label><input id="paidAreaOnly" type="checkbox" /> 站内厕所</label>
             <label><input id="accessibleOnly" type="checkbox" /> 无障碍</label>
             <label><input id="babyCareOnly" type="checkbox" /> 母婴室</label>
+            <label><input id="showFavOnly" type="checkbox" /> 仅收藏</label>
           </div>
+
+          <button id="locateBtn" class="locate-btn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+            </svg>
+            定位到当前位置
+          </button>
         </section>
 
         <section class="result-meta" aria-live="polite">
           <strong id="resultCount">0</strong>
           <span>个站点匹配</span>
         </section>
+
+        <div id="loadingState" class="loading-state">
+          <div class="loading-spinner"></div>
+          <span>加载中...</span>
+        </div>
 
         <section id="stationList" class="station-list" aria-label="站点列表"></section>
       </aside>
